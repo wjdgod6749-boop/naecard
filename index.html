@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>조정행 | 디지털 명함</title>
+  
+  <!-- Google Fonts: Cormorant Garamond (영문 세리프) & Noto Sans KR (본문) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ==========================================================================
+       1. 컬러 시스템 & 기본 변수 (메인 1색: 딥 네이비 + 포인트 1색: 샴페인 골드)
+       ========================================================================== */
+    :root {
+      --main-color: #132238;          /* 메인 색: 품격 있는 딥 네이비 */
+      --main-color-dark: #0A1320;     /* 밴드 그라데이션 심화 톤 */
+      --main-color-light: #1E3554;    /* 밴드 그라데이션 하이라이트 톤 */
+      --point-color: #B48A4E;         /* 포인트 색: 은은한 샴페인 골드 */
+      --point-color-soft: rgba(180, 138, 78, 0.12);
+
+      --bg-outer: #ECEEF2;            /* 데스크톱 외부 배경 */
+      --white: #FFFFFF;
+      --gray-50: #F8F9FB;             /* 카드 바탕 연한 톤 */
+      --gray-100: #F1F3F6;            /* 버튼/아이콘 배경 */
+      --gray-200: #E4E7EC;            /* 1px 구분선 */
+      --gray-400: #98A2B3;            /* 작은 라벨 텍스트 */
+      --gray-600: #475467;            /* 서브 텍스트 */
+      --gray-900: #101828;            /* 메인 텍스트 */
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--gray-900);
+      background-color: var(--bg-outer);
+      overflow: hidden; /* 전체 페이지 스크롤 방지 (카드 영역만 스크롤) */
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* 데스크톱 중앙 정렬 래퍼 */
+    .viewport-wrapper {
+      width: 100%;
+      height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ==========================================================================
+       2. 폰 화면 틀 (9:16 비율, 최대 너비 430px, 높이 100dvh)
+       ========================================================================== */
+    .phone-frame {
+      position: relative;
+      width: 100%;
+      max-width: 430px;
+      height: 100dvh;
+      /* 아주 연한 그라데이션 배경 */
+      background: linear-gradient(165deg, #FFFFFF 0%, #F6F7FA 52%, #EEF1F6 100%);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 데스크톱(431px 이상)에서는 둥근 폰 프레임 & 큰 그림자 적용 */
+    @media (min-width: 431px) {
+      .phone-frame {
+        height: min(100dvh - 32px, 880px);
+        aspect-ratio: 9 / 16;
+        border-radius: 38px;
+        box-shadow:
+          0 32px 72px -12px rgba(16, 24, 40, 0.22),
+          0 12px 28px -8px rgba(16, 24, 40, 0.10),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+      }
+    }
+
+    /* 배경 오른쪽 위 & 왼쪽 아래 은은한 원형 빛 */
+    .ambient-glow {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .ambient-glow.top-right {
+      top: -90px;
+      right: -80px;
+      width: 280px;
+      height: 280px;
+      background: radial-gradient(circle, rgba(180, 138, 78, 0.13) 0%, rgba(180, 138, 78, 0) 70%);
+    }
+
+    .ambient-glow.bottom-left {
+      bottom: -100px;
+      left: -90px;
+      width: 310px;
+      height: 310px;
+      background: radial-gradient(circle, rgba(19, 34, 56, 0.09) 0%, rgba(19, 34, 56, 0) 70%);
+    }
+
+    /* ==========================================================================
+       3. 상단 바 (Safe-area 대응 + 하단 흰색->투명 페이드)
+       ========================================================================== */
+    .top-bar {
+      position: relative;
+      z-index: 20;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: calc(14px + env(safe-area-inset-top)) 24px 18px;
+      background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.98) 0%,
+        rgba(255, 255, 255, 0.92) 68%,
+        rgba(255, 255, 255, 0) 100%
+      );
+    }
+
+    /* 지름 38px 원형 뒤로가기 버튼 */
+    .back-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid var(--gray-200);
+      background-color: var(--white);
+      box-shadow: 0 3px 10px rgba(16, 24, 40, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gray-900);
+      cursor: pointer;
+      transition: transform 0.16s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.16s ease;
+    }
+
+    .back-btn:active {
+      transform: scale(0.92);
+    }
+
+    /* 오른쪽 두 줄 제목 */
+    .top-title-group {
+      text-align: right;
+    }
+
+    .top-title-main {
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.25;
+      color: var(--gray-900);
+      letter-spacing: -0.02em;
+    }
+
+    .top-title-sub {
+      margin-top: 2px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.32em;
+      margin-right: -0.32em; /* 오른쪽 자간 여백 보정 */
+      color: var(--point-color);
+    }
+
+    /* ==========================================================================
+       4. 카드 스크롤 영역 (카드 영역만 세로 스크롤, 스크롤바 숨김)
+       ========================================================================== */
+    .card-scroll-area {
+      position: relative;
+      z-index: 10;
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 6px 20px calc(92px + env(safe-area-inset-bottom));
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE/Edge */
+    }
+
+    .card-scroll-area::-webkit-scrollbar {
+      display: none; /* Chrome, Safari */
+    }
+
+    /* ==========================================================================
+       5. 명함 카드 본체 & 등장 애니메이션
+       ========================================================================== */
+    .business-card {
+      position: relative;
+      width: 100%;
+      max-width: 372px;
+      margin: 0 auto;
+      border-radius: 30px;
+      background-color: var(--gray-50);
+      padding-bottom: 12px;
+      box-shadow:
+        0 26px 56px -12px rgba(19, 34, 56, 0.15),
+        0 8px 20px -6px rgba(19, 34, 56, 0.06),
+        0 0 0 1px rgba(255, 255, 255, 0.85);
+      overflow: hidden;
+
+      /* 등장 애니메이션: 아래에서 72px 올라오며 등장 (1.35초) */
+      opacity: 0;
+      transform: translateY(72px);
+      animation: cardSlideUp 1.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes cardSlideUp {
+      0% {
+        opacity: 0;
+        transform: translateY(72px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* 0.7초 뒤 흰 빛줄기가 카드 위를 왼쪽에서 오른쪽으로 비스듬히 한 번 스쳐 지나감 (2.1초) */
+    .card-shimmer {
+      position: absolute;
+      inset: 0;
+      border-radius: 30px;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 30;
+    }
+
+    .card-shimmer::after {
+      content: '';
+      position: absolute;
+      top: -30%;
+      left: -85%;
+      width: 55%;
+      height: 160%;
+      background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.42) 50%,
+        rgba(255, 255, 255, 0) 100%
+      );
+      transform: rotate(24deg);
+      animation: sheenSweep 2.1s cubic-bezier(0.25, 0.1, 0.25, 1) 0.7s 1 forwards;
+    }
+
+    @keyframes sheenSweep {
+      0% {
+        left: -85%;
+      }
+      100% {
+        left: 155%;
+      }
+    }
+
+    /* 1) 헤더 밴드: 높이 168px, 진한 메인 색 대각선 그라데이션 */
+    .header-band {
+      position: relative;
+      height: 168px;
+      padding: 24px 22px 0;
+      background: linear-gradient(135deg, var(--main-color-dark) 0%, var(--main-color) 55%, var(--main-color-light) 100%);
+      overflow: hidden;
+    }
+
+    /* 헤더 밴드 모서리에 은은한 원형 빛 2개 */
+    .header-band::before {
+      content: '';
+      position: absolute;
+      top: -45px;
+      right: -35px;
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 70%);
+      pointer-events: none;
+    }
+
+    .header-band::after {
+      content: '';
+      position: absolute;
+      bottom: -55px;
+      left: -30px;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(180, 138, 78, 0.22) 0%, rgba(180, 138, 78, 0) 72%);
+      pointer-events: none;
+    }
+
+    /* 왼쪽 위 영문 타이틀 & 작은 대문자 부제 */
+    .header-en-title {
+      position: relative;
+      z-index: 2;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 30px;
+      font-weight: 600;
+      line-height: 1.05;
+      letter-spacing: 0.14em;
+      color: var(--white);
+    }
+
+    .header-en-sub {
+      position: relative;
+      z-index: 2;
+      margin-top: 7px;
+      font-size: 9.5px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.44em;
+      color: rgba(255, 255, 255, 0.68);
+    }
+
+    /* 2) 흰 시트: 밴드 위로 38px 겹쳐 올라오고 좌우 여백 11px, radius 25px */
+    .white-sheet {
+      position: relative;
+      z-index: 5;
+      margin: -38px 11px 0;
+      padding: 62px 20px 24px;
+      background-color: var(--white);
+      border-radius: 25px;
+      box-shadow:
+        0 10px 30px rgba(16, 24, 40, 0.05),
+        0 1px 3px rgba(16, 24, 40, 0.03);
+    }
+
+    /* 3) 프로필 사진: 지름 100px 원형, 흰 테두리 4px, top -50px */
+    .profile-avatar-wrap {
+      position: absolute;
+      top: -50px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: 4px solid var(--white);
+      background-color: #EAE1D7;
+      box-shadow: 0 10px 24px rgba(19, 34, 56, 0.16);
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .profile-avatar {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 15%;
+      display: block;
+    }
+
+    .avatar-upload-hint {
+      position: absolute;
+      inset: 0;
+      background: rgba(19, 34, 56, 0.58);
+      color: var(--white);
+      font-size: 11px;
+      font-weight: 500;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .profile-avatar-wrap:hover .avatar-upload-hint,
+    .profile-avatar-wrap.empty .avatar-upload-hint {
+      opacity: 1;
+    }
+
+    /* 4) 이름 + 직함 · 한 줄 소개 */
+    .identity-block {
+      text-align: center;
+    }
+
+    .person-name {
+      font-size: 24px;
+      font-weight: 900;
+      line-height: 1.3;
+      letter-spacing: -0.02em;
+      color: var(--gray-900);
+    }
+
+    .person-tagline {
+      margin-top: 5px;
+      font-size: 12.5px;
+      line-height: 1.45;
+      color: var(--gray-600);
+    }
+
+    .person-role {
+      font-weight: 700;
+      color: var(--point-color);
+    }
+
+    .tagline-dot {
+      margin: 0 5px;
+      color: var(--gray-400);
+      font-weight: 700;
+    }
+
+    /* 5) 액션 버튼 4개 (4칸 그리드) */
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 22px;
+    }
+
+    .action-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-decoration: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: inherit;
+      transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    .action-item:active {
+      transform: scale(0.93);
+    }
+
+    .action-icon-box {
+      width: 51px;
+      height: 51px;
+      border-radius: 15px;
+      background-color: var(--gray-100);
+      border: 1px solid rgba(228, 231, 236, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--main-color);
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .action-item:hover .action-icon-box {
+      background-color: var(--point-color-soft);
+      color: var(--point-color);
+    }
+
+    .action-label {
+      margin-top: 7px;
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--gray-600);
+    }
+
+    /* 6) 가는 구분선 1px */
+    .section-divider {
+      height: 1px;
+      background-color: var(--gray-200);
+      margin: 22px 0 6px;
+    }
+
+    /* 7) 정보 리스트 */
+    .info-list {
+      list-style: none;
+    }
+
+    .info-item {
+      padding: 14px 2px;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .info-item:last-child {
+      border-bottom: none;
+      padding-bottom: 4px;
+    }
+
+    .info-link {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      border-radius: 10px;
+      transition: opacity 0.15s ease;
+    }
+
+    .info-link:active {
+      opacity: 0.65;
+    }
+
+    .info-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--gray-400);
+      margin-bottom: 4px;
+      letter-spacing: -0.01em;
+    }
+
+    .info-value {
+      font-size: 15px;
+      font-weight: 500;
+      line-height: 1.5;
+      color: var(--gray-900);
+      word-break: keep-all;
+    }
+
+    /* 여러 줄 항목에서 첫 줄 굵게 강조 */
+    .info-value .first-line {
+      display: block;
+      font-weight: 700;
+      color: var(--gray-900);
+    }
+
+    .info-value .sub-line {
+      display: block;
+      margin-top: 2px;
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--gray-600);
+    }
+
+    /* 카드 하단 마무리 문구 */
+    .card-footer-note {
+      margin-top: 14px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--gray-400);
+      letter-spacing: -0.01em;
+    }
+
+    /* ==========================================================================
+       6. 공유 버튼 (오른쪽 아래 고정, 지름 54px 원형, 1.2초 뒤 떠오름)
+       ========================================================================== */
+    .share-fab {
+      position: absolute;
+      right: 22px;
+      bottom: calc(22px + env(safe-area-inset-bottom));
+      z-index: 40;
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      border: none;
+      background: linear-gradient(135deg, var(--main-color-light) 0%, var(--main-color) 60%, var(--main-color-dark) 100%);
+      color: var(--white);
+      box-shadow:
+        0 12px 26px rgba(19, 34, 56, 0.32),
+        0 4px 10px rgba(19, 34, 56, 0.16);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+
+      /* 1.2초 뒤 아래에서 떠오르며 나타남 */
+      opacity: 0;
+      transform: translateY(28px) scale(0.92);
+      animation: fabFloatUp 0.75s cubic-bezier(0.16, 1, 0.3, 1) 1.2s forwards;
+      transition: transform 0.16s ease;
+    }
+
+    .share-fab:active {
+      transform: scale(0.92) !important;
+    }
+
+    @keyframes fabFloatUp {
+      0% {
+        opacity: 0;
+        transform: translateY(28px) scale(0.92);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* ==========================================================================
+       7. 토스트 메시지 (alert 대체)
+       ========================================================================== */
+    .toast-message {
+      position: absolute;
+      left: 50%;
+      bottom: calc(88px + env(safe-area-inset-bottom));
+      transform: translate(-50%, 14px);
+      z-index: 50;
+      background-color: rgba(19, 34, 56, 0.94);
+      color: var(--white);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 11px 18px;
+      border-radius: 999px;
+      white-space: nowrap;
+      box-shadow: 0 10px 24px rgba(16, 24, 40, 0.22);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .toast-message.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+  </style>
+</head>
+<body>
+  <div class="viewport-wrapper">
+    <main class="phone-frame" role="main">
+      <!-- 배경 원형 빛 2개 -->
+      <div class="ambient-glow top-right" aria-hidden="true"></div>
+      <div class="ambient-glow bottom-left" aria-hidden="true"></div>
+
+      <!-- 상단 바 -->
+      <header class="top-bar">
+        <button type="button" class="back-btn" id="backBtn" aria-label="뒤로가기">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+
+        <div class="top-title-group">
+          <div class="top-title-main">명함</div>
+          <div class="top-title-sub">BUSINESS CARD</div>
+        </div>
+      </header>
+
+      <!-- 카드 스크롤 영역 -->
+      <div class="card-scroll-area">
+        <article class="business-card" aria-label="조정행 디지털 명함">
+          <!-- 0.7초 뒤 대각선 빛줄기 효과 -->
+          <div class="card-shimmer" aria-hidden="true"></div>
+
+          <!-- 1) 헤더 밴드 -->
+          <div class="header-band">
+            <h1 class="header-en-title">JO JEONGHAENG</h1>
+            <p class="header-en-sub">AI EDUCATOR</p>
+          </div>
+
+          <!-- 2) 흰 시트 -->
+          <div class="white-sheet">
+            <!-- 3) 프로필 사진 (클릭 또는 드래그로 즉시 변경 가능) -->
+            <div class="profile-avatar-wrap" id="avatarDropZone" title="클릭하여 프로필 사진 선택">
+              <img
+                id="profileAvatarImg"
+                src="profile.jpg"
+                alt="조정행 프로필 사진"
+                class="profile-avatar"
+              />
+              <div class="avatar-upload-hint" id="avatarUploadHint">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+                <span>사진 변경</span>
+              </div>
+              <input type="file" id="avatarFileInput" accept="image/*" hidden />
+            </div>
+
+            <!-- 4) 이름 + 직함 · 한 줄 소개 -->
+            <div class="identity-block">
+              <h2 class="person-name">조정행</h2>
+              <p class="person-tagline">
+                <span class="person-role">강사</span>
+                <span class="tagline-dot">·</span>
+                <span>누구나 ai를 쉽게</span>
+              </p>
+            </div>
+
+            <!-- 5) 액션 버튼 4개 (전화, 문자, 메일, 저장) -->
+            <nav class="action-grid" aria-label="빠른 연락 및 저장">
+              <!-- 전화 -->
+              <a href="tel:010-9095-7849" class="action-item" aria-label="전화 걸기">
+                <span class="action-icon-box">
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                  </svg>
+                </span>
+                <span class="action-label">전화</span>
+              </a>
+
+              <!-- 문자 -->
+              <a href="sms:010-9095-7849" class="action-item" aria-label="문자 보내기">
+                <span class="action-icon-box">
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                </span>
+                <span class="action-label">문자</span>
+              </a>
+
+              <!-- 메일 -->
+              <a href="mailto:wjdgod7849@naver.com" class="action-item" aria-label="이메일 보내기">
+                <span class="action-icon-box">
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                  </svg>
+                </span>
+                <span class="action-label">메일</span>
+              </a>
+
+              <!-- 저장 (vCard 다운로드) -->
+              <button type="button" id="saveVcardBtn" class="action-item" aria-label="연락처 저장">
+                <span class="action-icon-box">
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                </span>
+                <span class="action-label">저장</span>
+              </button>
+            </nav>
+
+            <!-- 6) 가는 구분선 1px -->
+            <div class="section-divider" role="separator"></div>
+
+            <!-- 7) 정보 리스트 -->
+            <ul class="info-list">
+              <!-- 휴대폰번호 -->
+              <li class="info-item">
+                <a href="tel:010-9095-7849" class="info-link">
+                  <span class="info-label">휴대폰번호</span>
+                  <div class="info-value">010-9095-7849</div>
+                </a>
+              </li>
+
+              <!-- 메일 -->
+              <li class="info-item">
+                <a href="mailto:wjdgod7849@naver.com" class="info-link">
+                  <span class="info-label">메일</span>
+                  <div class="info-value">wjdgod7849@naver.com</div>
+                </a>
+              </li>
+
+              <!-- 직무/직책 -->
+              <li class="info-item">
+                <span class="info-label">직무/직책</span>
+                <div class="info-value">강사 · AI 교육 전문가</div>
+              </li>
+
+              <!-- 여러 줄 항목 1 (첫 줄 굵게 강조) -->
+              <li class="info-item">
+                <span class="info-label">주요 강의 분야</span>
+                <div class="info-value">
+                  <span class="first-line">생성형 AI 실무 활용 및 업무 자동화</span>
+                  <span class="sub-line">프롬프트 엔지니어링 · ChatGPT · 맞춤형 기업/기관 특강</span>
+                </div>
+              </li>
+
+              <!-- 여러 줄 항목 2 (첫 줄 굵게 강조) -->
+              <li class="info-item">
+                <span class="info-label">교육 철학</span>
+                <div class="info-value">
+                  <span class="first-line">누구나 AI를 쉽고 실용적으로</span>
+                  <span class="sub-line">어려운 기술 용어 없이 바로 현업에 적용하는 눈높이 교육</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <!-- 카드 하단 안내 문구 -->
+          <p class="card-footer-note">언제든 편하게 연락 주세요</p>
+        </article>
+      </div>
+
+      <!-- 오른쪽 아래 공유 버튼 -->
+      <button type="button" class="share-fab" id="shareBtn" aria-label="명함 공유하기">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="18" cy="5" r="3" />
+          <circle cx="6" cy="12" r="3" />
+          <circle cx="18" cy="19" r="3" />
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+        </svg>
+      </button>
+
+      <!-- 토스트 알림 -->
+      <div class="toast-message" id="toast" role="status" aria-live="polite"></div>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      const toastEl = document.getElementById('toast');
+      let toastTimer = null;
+
+      /**
+       * 프로필 사진 로드 실패 시 안내 오버레이 표시 및 클릭/드래그 업로드 지원
+       */
+      const avatarDropZone = document.getElementById('avatarDropZone');
+      const profileAvatarImg = document.getElementById('profileAvatarImg');
+      const avatarFileInput = document.getElementById('avatarFileInput');
+
+      // 이전에 브라우저에 저장한 프로필 사진이 있다면 자동 복원
+      const savedAvatarData = localStorage.getItem('jh_profile_avatar');
+      if (savedAvatarData) {
+        profileAvatarImg.src = savedAvatarData;
+      }
+
+      profileAvatarImg.addEventListener('error', () => {
+        avatarDropZone.classList.add('empty');
+        profileAvatarImg.style.display = 'none';
+      });
+
+      profileAvatarImg.addEventListener('load', () => {
+        avatarDropZone.classList.remove('empty');
+        profileAvatarImg.style.display = 'block';
+      });
+
+      function applyAvatarFile(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target.result;
+          profileAvatarImg.src = dataUrl;
+          try {
+            localStorage.setItem('jh_profile_avatar', dataUrl);
+          } catch (err) {
+            // 용량 초과 시 현재 세션에만 유지
+          }
+          showToast('프로필 사진이 적용되었습니다');
+        };
+        reader.readAsDataURL(file);
+      }
+
+      avatarDropZone.addEventListener('click', () => {
+        avatarFileInput.click();
+      });
+
+      avatarFileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          applyAvatarFile(e.target.files[0]);
+        }
+      });
+
+      avatarDropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        avatarDropZone.style.transform = 'translateX(-50%) scale(1.05)';
+      });
+
+      avatarDropZone.addEventListener('dragleave', () => {
+        avatarDropZone.style.transform = 'translateX(-50%) scale(1)';
+      });
+
+      avatarDropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        avatarDropZone.style.transform = 'translateX(-50%) scale(1)';
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          applyAvatarFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      /**
+       * 하단 토스트 메시지 표시 함수
+       * @param {string} message - 표시할 안내 문구
+       */
+      function showToast(message) {
+        toastEl.textContent = message;
+        toastEl.classList.add('show');
+
+        if (toastTimer) {
+          clearTimeout(toastTimer);
+        }
+        toastTimer = setTimeout(() => {
+          toastEl.classList.remove('show');
+        }, 2600);
+      }
+
+      /**
+       * 뒤로가기 버튼 동작
+       */
+      const backBtn = document.getElementById('backBtn');
+      backBtn.addEventListener('click', () => {
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          showToast('이전 페이지가 없습니다');
+        }
+      });
+
+      /**
+       * vCard (.vcf) 파일 생성 및 다운로드
+       * 이름, 직함, 전화, 메일 포함
+       */
+      const saveVcardBtn = document.getElementById('saveVcardBtn');
+      saveVcardBtn.addEventListener('click', () => {
+        try {
+          const vcardLines = [
+            'BEGIN:VCARD',
+            'VERSION:3.0',
+            'N:조;정행;;;',
+            'FN:조정행',
+            'TITLE:강사',
+            'NOTE:누구나 ai를 쉽게',
+            'TEL;TYPE=CELL,VOICE:010-9095-7849',
+            'EMAIL;TYPE=PREF,INTERNET:wjdgod7849@naver.com',
+            'END:VCARD'
+          ];
+          const vcardContent = vcardLines.join('\r\n');
+          const blob = new Blob([vcardContent], { type: 'text/vcard;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = '조정행_디지털명함.vcf';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+
+          showToast('연락처가 저장되었습니다');
+        } catch (error) {
+          showToast('연락처 저장 중 오류가 발생했습니다');
+        }
+      });
+
+      /**
+       * 클립보드 주소 복사 폴백 (execCommand 호환)
+       */
+      function copyUrlFallback(urlText) {
+        const tempInput = document.createElement('textarea');
+        tempInput.value = urlText;
+        tempInput.setAttribute('readonly', '');
+        tempInput.style.position = 'fixed';
+        tempInput.style.opacity = '0';
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        try {
+          document.execCommand('copy');
+          showToast('명함 주소가 복사되었습니다');
+        } catch (err) {
+          showToast('주소를 복사할 수 없습니다');
+        }
+        document.body.removeChild(tempInput);
+      }
+
+      /**
+       * 공유 버튼 동작 (navigator.share 우선, 미지원 시 URL 복사 후 토스트)
+       */
+      const shareBtn = document.getElementById('shareBtn');
+      shareBtn.addEventListener('click', async () => {
+        const shareData = {
+          title: '조정행 | AI 강사 디지털 명함',
+          text: '조정행 강사 · 누구나 ai를 쉽게',
+          url: window.location.href
+        };
+
+        if (navigator.share) {
+          try {
+            await navigator.share(shareData);
+          } catch (err) {
+            // 사용자가 공유 창을 닫은 경우(AbortError)는 무시
+            if (err.name !== 'AbortError') {
+              copyUrlFallback(window.location.href);
+            }
+          }
+        } else {
+          copyUrlFallback(window.location.href);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
